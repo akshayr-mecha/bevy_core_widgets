@@ -8,17 +8,17 @@ mod core_checkbox;
 mod core_radio;
 mod core_slider;
 mod cursor;
+mod events;
 pub mod hover;
 mod interaction_disabled;
-mod value_change;
 
 pub use core_barrier::CoreBarrier;
 pub use core_button::{CoreButton, CoreButtonPressed};
 pub use core_checkbox::CoreCheckbox;
 pub use core_radio::CoreRadio;
 pub use core_slider::CoreSlider;
+pub use events::{ButtonClicked, ValueChange};
 pub use interaction_disabled::InteractionDisabled;
-pub use value_change::ValueChange;
 
 pub struct CoreWidgetsPlugin;
 

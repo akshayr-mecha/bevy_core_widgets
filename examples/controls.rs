@@ -1,7 +1,13 @@
-//! Example of a simple UI layout
+//! Demonstrations of the various core widgets.
+//!
+//! Note that this example should not be used as a basis for a real application. A real application
+//! would likely use a more sophisticated UI framework or library that includes composable styles,
+//! templates, reactive signals, and other techniques that improve the developer experience. This
+//! example has been written in a very brute-force, low-level style so as to demonstrate the
+//! functionality of the widgets with minimal dependencies.
 
 use bevy::{
-    ecs::{system::SystemId, world::DeferredWorld},
+    ecs::system::SystemId,
     input_focus::{
         tab_navigation::{TabGroup, TabIndex},
         InputFocus, InputFocusVisible,
@@ -12,8 +18,8 @@ use bevy::{
     winit::cursor::CursorIcon,
 };
 use bevy_core_widgets::{
-    hover::Hovering, CoreButton, CoreButtonPressed, CoreCheckbox, CoreWidgetsPlugin,
-    InteractionDisabled,
+    hover::Hovering, ButtonClicked, CoreButton, CoreButtonPressed, CoreCheckbox, CoreRadio,
+    CoreWidgetsPlugin, InteractionDisabled, ValueChange,
 };
 
 fn main() {
@@ -26,6 +32,9 @@ fn main() {
                 update_button_bg_colors,
                 update_button_focus_rect,
                 update_checkbox_colors,
+                update_checkbox_focus_rect,
+                update_radio_colors,
+                update_radio_focus_rect,
                 close_on_esc,
             ),
         )
@@ -52,40 +61,16 @@ fn setup_view_root(mut commands: Commands) {
         UiTargetCamera(camera),
         TabGroup::default(),
         Children::spawn((
+            Spawn(Text::new("Button")),
             Spawn(buttons_demo()),
+            Spawn(Text::new("Checkbox")),
             Spawn(checkbox_demo()),
+            Spawn(Text::new("Radio")),
+            Spawn(radio_demo()),
+            Spawn(Text::new("Slider")),
+            // Spawn(Text::new("SpinBox")),
+            // Spawn(Text::new("DisclosureToggle")),
             // (
-            //     Spawn((Text::new("Swatch"), UseInheritedTextStyles)),
-            //     Spawn((
-            //         Node::default(),
-            //         Styles(style_row),
-            //         Children::spawn((
-            //             Invoke(Swatch::new(palettes::css::GOLDENROD)),
-            //             Invoke(Swatch::new(palettes::css::LIME)),
-            //             Invoke(Swatch::new(palettes::css::RED)),
-            //             Invoke(Swatch::new(Srgba::NONE)),
-            //             Invoke(Swatch::new(palettes::css::BLUE).selected(true)),
-            //         )),
-            //     )),
-            // ),
-            // (
-            //     Spawn((Text::new("SwatchGrid"), UseInheritedTextStyles)),
-            //     Spawn((
-            //         Node::default(),
-            //         Styles(style_row),
-            //         Children::spawn(Invoke(SwatchGridDemo)),
-            //     )),
-            // ),
-            // (
-            //     Spawn((Text::new("Checkbox"), UseInheritedTextStyles)),
-            //     Spawn((
-            //         Node::default(),
-            //         Styles(style_column),
-            //         Children::spawn(Invoke(CheckboxDemo)),
-            //     )),
-            // ),
-            // (
-            //     Spawn((Text::new("Slider"), UseInheritedTextStyles)),
             //     Spawn((
             //         Node::default(),
             //         Styles((style_column, |ec: &mut EntityCommands| {
@@ -96,105 +81,26 @@ fn setup_view_root(mut commands: Commands) {
             //         Children::spawn(Invoke(SliderDemo)),
             //     )),
             // ),
-            // (
-            //     Spawn((Text::new("GradientSlider"), UseInheritedTextStyles)),
-            //     Spawn((
-            //         Node::default(),
-            //         Styles((style_column, |ec: &mut EntityCommands| {
-            //             ec.entry::<Node>().and_modify(|mut node| {
-            //                 node.align_items = ui::AlignItems::Stretch;
-            //             });
-            //         })),
-            //         Children::spawn(Invoke(GradientSliderDemo)),
-            //     )),
-            // ),
-            // (
-            //     Spawn((Text::new("SpinBox"), UseInheritedTextStyles)),
-            //     Spawn((
-            //         Node::default(),
-            //         Styles((style_column, |ec: &mut EntityCommands| {
-            //             ec.entry::<Node>().and_modify(|mut node| {
-            //                 node.align_items = ui::AlignItems::Stretch;
-            //             });
-            //         })),
-            //         Children::spawn(Invoke(SpinBoxDemo)),
-            //     )),
-            // ),
-            // Spawn((Text::new("DisclosureToggle"), UseInheritedTextStyles)),
-            // Invoke(DisclosureToggleDemo),
         )),
     ));
+
+    commands.add_observer(|mut trigger: Trigger<ButtonClicked>| {
+        trigger.propagate(false);
+        let button_id = trigger.target();
+        info!("Got button click event: {:?}", button_id);
+    });
+
+    commands.add_observer(
+        |mut trigger: Trigger<ValueChange<bool>>, mut q_checkbox: Query<&mut CoreCheckbox>| {
+            trigger.propagate(false);
+            if let Ok(mut checkbox) = q_checkbox.get_mut(trigger.target()) {
+                // Update checkbox state from event.
+                checkbox.checked = trigger.event().0;
+                info!("New checkbox state: {:?}", checkbox.checked);
+            }
+        },
+    );
 }
-
-// struct SwatchGridDemo;
-
-// impl Template for SwatchGridDemo {
-//     fn build(&self, tc: &mut TemplateContext) {
-//         let selected_color = tc.create_mutable::<Srgba>(palettes::css::BLUE);
-//         let on_change_color =
-//             tc.create_callback_arg(move |color: In<Srgba>, mut world: DeferredWorld| {
-//                 selected_color.set(&mut world, *color);
-//             });
-//         tc.invoke(
-//             SwatchGrid::new(vec![
-//                 palettes::css::BLUE,
-//                 palettes::css::RED,
-//                 palettes::css::GREEN,
-//                 palettes::css::REBECCA_PURPLE,
-//             ])
-//             .grid_size(UVec2::new(12, 4))
-//             .selected(selected_color.signal())
-//             .on_change(on_change_color),
-//         );
-//     }
-// }
-
-// struct CheckboxDemo;
-
-// impl Template for CheckboxDemo {
-//     fn build(&self, tc: &mut TemplateContext) {
-//         let checked_1 = tc.create_mutable(true);
-//         let checked_2 = tc.create_mutable(false);
-//         let on_change_1 =
-//             tc.create_callback_arg(move |value: In<bool>, mut world: DeferredWorld| {
-//                 checked_1.set(&mut world, *value);
-//             });
-//         let on_change_2 =
-//             tc.create_callback_arg(move |value: In<bool>, mut world: DeferredWorld| {
-//                 checked_2.set(&mut world, *value);
-//             });
-//         tc.invoke(
-//             Checkbox::new()
-//                 .labeled("Checked")
-//                 .aria_label("Alpha")
-//                 .checked(checked_1)
-//                 .on_change(on_change_1),
-//         )
-//         .invoke(
-//             Checkbox::new()
-//                 .labeled("Checked (disabled)")
-//                 .aria_label("Beta")
-//                 .checked(checked_1)
-//                 .on_change(on_change_1)
-//                 .disabled(true),
-//         )
-//         .invoke(
-//             Checkbox::new()
-//                 .labeled("Unchecked")
-//                 .aria_label("Gamma")
-//                 .checked(checked_2)
-//                 .on_change(on_change_2),
-//         )
-//         .invoke(
-//             Checkbox::new()
-//                 .labeled("Unchecked (disabled)")
-//                 .aria_label("Delta")
-//                 .checked(checked_2)
-//                 .on_change(on_change_2)
-//                 .disabled(true),
-//         );
-//     }
-// }
 
 // struct SliderDemo;
 
@@ -233,71 +139,6 @@ fn setup_view_root(mut commands: Commands) {
 //     }
 // }
 
-// struct GradientSliderDemo;
-
-// impl Template for GradientSliderDemo {
-//     fn build(&self, tc: &mut TemplateContext) {
-//         tc.spawn((Text::new("GradientSlider"), UseInheritedTextStyles));
-//         let red = tc.create_mutable::<f32>(128.);
-//         let on_change_red =
-//             tc.create_callback_arg(move |new_value: In<f32>, mut world: DeferredWorld| {
-//                 red.set(&mut world, *new_value);
-//             });
-//         tc.invoke(
-//             GradientSlider::new()
-//                 .gradient(Signal::Constant(ColorGradient::new(&[
-//                     Srgba::new(0.0, 0.0, 0.0, 1.0),
-//                     Srgba::new(1.0, 0.0, 0.0, 1.0),
-//                 ])))
-//                 .min(0.)
-//                 .max(255.)
-//                 .value(red)
-//                 // .style(style_slider)
-//                 .precision(1)
-//                 .on_change(on_change_red),
-//         );
-//     }
-// }
-
-// struct SpinBoxDemo;
-
-// impl Template for SpinBoxDemo {
-//     fn build(&self, tc: &mut TemplateContext) {
-//         let spinbox_value = tc.create_mutable::<f32>(50.);
-//         let on_change_spinbox =
-//             tc.create_callback_arg(move |new_value: In<f32>, mut world: DeferredWorld| {
-//                 spinbox_value.set(&mut world, *new_value);
-//             });
-//         tc.invoke(
-//             SpinBox::new()
-//                 .min(0.)
-//                 .max(100.)
-//                 .value(spinbox_value)
-//                 .on_change(on_change_spinbox),
-//         );
-//     }
-// }
-
-// struct DisclosureToggleDemo;
-
-// impl Template for DisclosureToggleDemo {
-//     fn build(&self, tc: &mut TemplateContext) {
-//         let expanded = tc.create_mutable(false);
-//         let on_change = tc.create_callback_arg(move |value: In<bool>, mut world: DeferredWorld| {
-//             expanded.set(&mut world, *value);
-//         });
-
-//         tc.spawn((
-//             Node::default(),
-//             Children::spawn(Invoke(
-//                 DisclosureToggle::new()
-//                     .expanded(expanded)
-//                     .on_change(on_change),
-//             )),
-//         ));
-//     }
-// }
-
 pub fn close_on_esc(input: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
     if input.just_pressed(KeyCode::Escape) {
         exit.write(AppExit::Success);
@@ -329,7 +170,7 @@ fn buttons_demo() -> impl Bundle {
             justify_content: ui::JustifyContent::Start,
             align_items: ui::AlignItems::Center,
             align_content: ui::AlignContent::Center,
-            // padding: ui::UiRect::axes(ui::Val::Px(12.0), ui::Val::Px(0.0)),
+            padding: ui::UiRect::axes(ui::Val::Px(12.0), ui::Val::Px(0.0)),
             column_gap: ui::Val::Px(6.0),
             ..default()
         },
@@ -447,6 +288,7 @@ fn checkbox_demo() -> impl Bundle {
             flex_direction: ui::FlexDirection::Column,
             align_items: ui::AlignItems::Start,
             align_content: ui::AlignContent::Start,
+            padding: ui::UiRect::axes(ui::Val::Px(12.0), ui::Val::Px(0.0)),
             row_gap: ui::Val::Px(6.0),
             ..default()
         },
@@ -521,7 +363,6 @@ fn checkbox(caption: &str, checked: bool, on_change: Option<SystemId<In<bool>>>)
 fn update_checkbox_colors(
     mut q_checkbox: Query<
         (
-            Entity,
             &CoreCheckbox,
             &Hovering,
             Has<InteractionDisabled>,
@@ -537,11 +378,9 @@ fn update_checkbox_colors(
         ),
     >,
     mut q_border_color: Query<(&mut BorderColor, &mut Children), Without<DemoCheckbox>>,
-    mut q_bg_color: Query<&mut BorderColor, (Without<DemoCheckbox>, Without<Children>)>,
+    mut q_bg_color: Query<&mut BackgroundColor, (Without<DemoCheckbox>, Without<Children>)>,
 ) {
-    for (checkbox_id, checkbox_state, Hovering(is_hovering), is_disabled, children) in
-        q_checkbox.iter_mut()
-    {
+    for (checkbox_state, Hovering(is_hovering), is_disabled, children) in q_checkbox.iter_mut() {
         let color: Color = if is_disabled {
             // If the checkbox is disabled, use a lighter color
             colors::U4.with_alpha(0.2)
@@ -558,33 +397,227 @@ fn update_checkbox_colors(
             continue;
         };
 
-        let Ok((mut border_color, children)) = q_border_color.get_mut(*border_id) else {
+        let Ok((mut border_color, border_children)) = q_border_color.get_mut(*border_id) else {
             continue;
         };
 
         if border_color.0 != color {
-            // Update the background color of the checkbox
+            // Update the background color of the check mark
             border_color.0 = color;
         }
 
-        let Some(mark_id) = children.first() else {
+        let Some(mark_id) = border_children.first() else {
+            warn!("Checkbox does not have a mark entity.");
             continue;
         };
 
-        let Ok(mut bg_color) = q_bg_color.get_mut(*mark_id) else {
+        let Ok(mut mark_bg) = q_bg_color.get_mut(*mark_id) else {
+            warn!("Checkbox mark entity lacking a background color.");
             continue;
         };
 
-        let color: Color = match (is_disabled, checkbox_state.checked) {
+        let mark_color: Color = match (is_disabled, checkbox_state.checked) {
             (true, true) => colors::PRIMARY.with_alpha(0.5),
             (false, true) => colors::PRIMARY,
             (_, false) => Srgba::NONE,
         }
         .into();
 
-        if bg_color.0 != color {
-            // Update the background color of the checkbox
-            bg_color.0 = color;
+        if mark_bg.0 != mark_color {
+            // Update the color of the check mark
+            mark_bg.0 = mark_color;
+        }
+    }
+}
+
+// Update the button's focus rectangle.
+#[allow(clippy::type_complexity)]
+fn update_checkbox_focus_rect(
+    mut query: Query<(Entity, Has<Outline>), With<DemoCheckbox>>,
+    focus: Res<InputFocus>,
+    focus_visible: ResMut<InputFocusVisible>,
+    mut commands: Commands,
+) {
+    for (checkbox, has_focus) in query.iter_mut() {
+        let needs_focus = Some(checkbox) == focus.0 && focus_visible.0;
+        if needs_focus != has_focus {
+            if needs_focus {
+                commands.entity(checkbox).insert(Outline {
+                    color: colors::FOCUS.into(),
+                    width: ui::Val::Px(2.0),
+                    offset: ui::Val::Px(1.0),
+                });
+            } else {
+                commands.entity(checkbox).remove::<Outline>();
+            }
+        }
+    }
+}
+
+fn radio_demo() -> impl Bundle {
+    (
+        Node {
+            display: ui::Display::Flex,
+            flex_direction: ui::FlexDirection::Column,
+            align_items: ui::AlignItems::Start,
+            align_content: ui::AlignContent::Start,
+            padding: ui::UiRect::axes(ui::Val::Px(12.0), ui::Val::Px(0.0)),
+            row_gap: ui::Val::Px(6.0),
+            ..default()
+        },
+        Children::spawn((
+            Spawn(radio("WKRP", true, None)),
+            Spawn(radio("WPIG", false, None)),
+            Spawn(radio("Galaxy News Radio", false, None)),
+            Spawn(radio("KBBL-FM", false, None)),
+            Spawn(radio("Radio Rock", false, None)),
+        )),
+    )
+}
+
+#[derive(Component, Default)]
+struct DemoRadio;
+
+fn radio(caption: &str, checked: bool, on_click: Option<SystemId>) -> impl Bundle {
+    (
+        Node {
+            display: ui::Display::Flex,
+            flex_direction: ui::FlexDirection::Row,
+            justify_content: ui::JustifyContent::FlexStart,
+            align_items: ui::AlignItems::Center,
+            align_content: ui::AlignContent::Center,
+            column_gap: ui::Val::Px(4.0),
+            ..default()
+        },
+        Name::new("Radio"),
+        Hovering::default(),
+        CursorIcon::System(SystemCursorIcon::Pointer),
+        DemoRadio,
+        CoreRadio { on_click, checked },
+        TabIndex(0),
+        Children::spawn((
+            Spawn((
+                // Radio outer
+                Node {
+                    display: ui::Display::Flex,
+                    width: ui::Val::Px(16.0),
+                    height: ui::Val::Px(16.0),
+                    border: ui::UiRect::all(ui::Val::Px(2.0)),
+                    ..default()
+                },
+                BorderColor(colors::U4.into()), // Border color for the radio
+                BorderRadius::all(ui::Val::Percent(50.0)),
+                children![
+                    // Radio inner
+                    (
+                        Node {
+                            display: ui::Display::Flex,
+                            width: ui::Val::Px(8.0),
+                            height: ui::Val::Px(8.0),
+                            position_type: ui::PositionType::Absolute,
+                            left: ui::Val::Px(2.0),
+                            top: ui::Val::Px(2.0),
+                            ..default()
+                        },
+                        BackgroundColor(colors::PRIMARY.into()),
+                        BorderRadius::all(ui::Val::Percent(50.0)),
+                    ),
+                ],
+            )),
+            Spawn((
+                Text::new(caption),
+                TextFont {
+                    font_size: 14.0,
+                    ..default()
+                },
+            )),
+        )),
+    )
+}
+
+// Update the button's background color.
+#[allow(clippy::type_complexity)]
+fn update_radio_colors(
+    mut q_radio: Query<
+        (&CoreRadio, &Hovering, Has<InteractionDisabled>, &Children),
+        (
+            With<DemoRadio>,
+            Or<(Added<DemoRadio>, Changed<Hovering>, Changed<CoreRadio>)>,
+        ),
+    >,
+    mut q_border_color: Query<(&mut BorderColor, &mut Children), Without<DemoRadio>>,
+    mut q_bg_color: Query<&mut BackgroundColor, (Without<DemoRadio>, Without<Children>)>,
+) {
+    for (radio_state, Hovering(is_hovering), is_disabled, children) in q_radio.iter_mut() {
+        let color: Color = if is_disabled {
+            // If the radio is disabled, use a lighter color
+            colors::U4.with_alpha(0.2)
+        } else if *is_hovering {
+            // If hovering, use a lighter color
+            colors::U5
+        } else {
+            // Default color for the radio
+            colors::U4
+        }
+        .into();
+
+        let Some(border_id) = children.first() else {
+            continue;
+        };
+
+        let Ok((mut border_color, border_children)) = q_border_color.get_mut(*border_id) else {
+            continue;
+        };
+
+        if border_color.0 != color {
+            // Update the background color of the check mark
+            border_color.0 = color;
+        }
+
+        let Some(mark_id) = border_children.first() else {
+            warn!("Radio does not have a mark entity.");
+            continue;
+        };
+
+        let Ok(mut mark_bg) = q_bg_color.get_mut(*mark_id) else {
+            warn!("Radio mark entity lacking a background color.");
+            continue;
+        };
+
+        let mark_color: Color = match (is_disabled, radio_state.checked) {
+            (true, true) => colors::PRIMARY.with_alpha(0.5),
+            (false, true) => colors::PRIMARY,
+            (_, false) => Srgba::NONE,
+        }
+        .into();
+
+        if mark_bg.0 != mark_color {
+            // Update the color of the check mark
+            mark_bg.0 = mark_color;
+        }
+    }
+}
+
+// Update the button's focus rectangle.
+#[allow(clippy::type_complexity)]
+fn update_radio_focus_rect(
+    mut query: Query<(Entity, Has<Outline>), With<DemoRadio>>,
+    focus: Res<InputFocus>,
+    focus_visible: ResMut<InputFocusVisible>,
+    mut commands: Commands,
+) {
+    for (radio, has_focus) in query.iter_mut() {
+        let needs_focus = Some(radio) == focus.0 && focus_visible.0;
+        if needs_focus != has_focus {
+            if needs_focus {
+                commands.entity(radio).insert(Outline {
+                    color: colors::FOCUS.into(),
+                    width: ui::Val::Px(2.0),
+                    offset: ui::Val::Px(1.0),
+                });
+            } else {
+                commands.entity(radio).remove::<Outline>();
+            }
         }
     }
 }
@@ -597,9 +630,7 @@ mod colors {
     pub const U3: Srgba = Srgba::new(0.224, 0.224, 0.243, 1.0);
     pub const U4: Srgba = Srgba::new(0.486, 0.486, 0.529, 1.0);
     pub const U5: Srgba = Srgba::new(1.0, 1.0, 1.0, 1.0);
-    // pub const BACKGROUND: Srgba = Srgba::new(0.118, 0.118, 0.133, 1.0);
     // pub const FOREGROUND: Srgba = Srgba::new(0.925, 0.925, 0.925, 1.0);
-    // pub const DIM: Srgba = Srgba::new(0.7, 0.7, 0.7, 1.0);
     pub const PRIMARY: Srgba = Srgba::new(0.341, 0.435, 0.525, 1.0);
     pub const DESTRUCTIVE: Srgba = Srgba::new(0.525, 0.341, 0.404, 1.0);
     pub const FOCUS: Srgba = Srgba::new(0.055, 0.647, 0.914, 0.15);
