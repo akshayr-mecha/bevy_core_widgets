@@ -18,7 +18,7 @@ pub use core_button::{CoreButton, CoreButtonPressed};
 pub use core_checkbox::CoreCheckbox;
 pub use core_radio::CoreRadio;
 pub use core_radio_group::CoreRadioGroup;
-pub use core_slider::CoreSlider;
+pub use core_slider::{CoreSlider, SliderDragState};
 pub use events::{ButtonClicked, ValueChange};
 pub use interaction_disabled::InteractionDisabled;
 

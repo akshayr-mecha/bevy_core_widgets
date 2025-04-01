@@ -46,8 +46,8 @@ fn checkbox_on_key_input(
             && (event.key_code == KeyCode::Enter || event.key_code == KeyCode::Space)
         {
             let is_checked = checkbox.checked;
+            trigger.propagate(false);
             if let Some(on_change) = checkbox.on_change {
-                trigger.propagate(false);
                 commands.run_system_with(on_change, !is_checked);
             } else {
                 commands.trigger_targets(ValueChange(!is_checked), trigger.target());

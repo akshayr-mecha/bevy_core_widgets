@@ -4,7 +4,7 @@
 //! would likely use a more sophisticated UI framework or library that includes composable styles,
 //! templates, reactive signals, and other techniques that improve the developer experience. This
 //! example has been written in a very brute-force, low-level style so as to demonstrate the
-//! functionality of the widgets with minimal dependencies.
+//! functionality of the core widgets with minimal dependencies.
 
 use bevy::{
     ecs::system::SystemId,
@@ -19,7 +19,8 @@ use bevy::{
 };
 use bevy_core_widgets::{
     hover::Hovering, ButtonClicked, CoreButton, CoreButtonPressed, CoreCheckbox, CoreRadio,
-    CoreRadioGroup, CoreWidgetsPlugin, InteractionDisabled, ValueChange,
+    CoreRadioGroup, CoreSlider, CoreWidgetsPlugin, InteractionDisabled, SliderDragState,
+    ValueChange,
 };
 
 fn main() {
@@ -30,11 +31,10 @@ fn main() {
             Update,
             (
                 update_button_bg_colors,
-                update_button_focus_rect,
+                update_focus_rect,
                 update_checkbox_colors,
-                update_checkbox_focus_rect,
                 update_radio_colors,
-                update_radio_group_focus_rect,
+                update_slider_thumb,
                 close_on_esc,
             ),
         )
@@ -73,19 +73,9 @@ fn setup_view_root(mut commands: Commands) {
             Spawn(Text::new("Radio")),
             Spawn(radio_demo()),
             Spawn(Text::new("Slider")),
+            Spawn(slider_demo()),
             // Spawn(Text::new("SpinBox")),
             // Spawn(Text::new("DisclosureToggle")),
-            // (
-            //     Spawn((
-            //         Node::default(),
-            //         Styles((style_column, |ec: &mut EntityCommands| {
-            //             ec.entry::<Node>().and_modify(|mut node| {
-            //                 node.align_items = ui::AlignItems::Stretch;
-            //             });
-            //         })),
-            //         Children::spawn(Invoke(SliderDemo)),
-            //     )),
-            // ),
         )),
     ));
 
@@ -112,44 +102,19 @@ fn setup_view_root(mut commands: Commands) {
             }
         },
     );
+
+    // Observer for sliders that don't have an on_change handler.
+    commands.add_observer(
+        |mut trigger: Trigger<ValueChange<f32>>, mut q_slider: Query<&mut CoreSlider>| {
+            trigger.propagate(false);
+            if let Ok(mut slider) = q_slider.get_mut(trigger.target()) {
+                // Update slider state from event.
+                slider.set_value(trigger.event().0);
+                info!("New slider state: {:?}", slider.value());
+            }
+        },
+    );
 }
-
-// struct SliderDemo;
-
-// impl Template for SliderDemo {
-//     fn build(&self, tc: &mut TemplateContext) {
-//         let slider_value = tc.create_mutable::<f32>(50.);
-//         let on_change_slider =
-//             tc.create_callback_arg(move |new_value: In<f32>, mut world: DeferredWorld| {
-//                 slider_value.set(&mut world, *new_value);
-//             });
-//         tc.spawn((
-//             Node::default(),
-//             Styles((style_column, |ec: &mut EntityCommands| {
-//                 ec.entry::<Node>().and_modify(|mut node| {
-//                     node.align_items = ui::AlignItems::Stretch;
-//                 });
-//             })),
-//             Children::spawn((
-//                 Invoke(
-//                     Slider::new()
-//                         .min(0.)
-//                         .max(100.)
-//                         .value(slider_value)
-//                         .on_change(on_change_slider),
-//                 ),
-//                 Invoke(
-//                     Slider::new()
-//                         .min(0.)
-//                         .max(100.)
-//                         .value(slider_value)
-//                         .label("Value:")
-//                         .on_change(on_change_slider),
-//                 ),
-//             )),
-//         ));
-//     }
-// }
 
 pub fn close_on_esc(input: Res<ButtonInput<KeyCode>>, mut exit: EventWriter<AppExit>) {
     if input.just_pressed(KeyCode::Escape) {
@@ -172,6 +137,32 @@ pub enum ButtonVariant {
 
     /// A button that is in a "toggled" state.
     Selected,
+}
+
+// Places an outline around the currently focused widget. This is a generic implementation for demo
+// purposes; in a real widget library the focus rectangle would be customized to the shape of
+// the individual widgets.
+#[allow(clippy::type_complexity)]
+fn update_focus_rect(
+    mut query: Query<(Entity, Has<Outline>), With<TabIndex>>,
+    focus: Res<InputFocus>,
+    focus_visible: ResMut<InputFocusVisible>,
+    mut commands: Commands,
+) {
+    for (control, has_focus) in query.iter_mut() {
+        let needs_focus = Some(control) == focus.0 && focus_visible.0;
+        if needs_focus != has_focus {
+            if needs_focus {
+                commands.entity(control).insert(Outline {
+                    color: colors::FOCUS.into(),
+                    width: ui::Val::Px(2.0),
+                    offset: ui::Val::Px(1.0),
+                });
+            } else {
+                commands.entity(control).remove::<Outline>();
+            }
+        }
+    }
 }
 
 /// Create a row of demo buttons
@@ -268,30 +259,6 @@ fn update_button_bg_colors(
         };
 
         bg_color.0 = new_color.into();
-    }
-}
-
-// Update the button's focus rectangle.
-#[allow(clippy::type_complexity)]
-fn update_button_focus_rect(
-    mut query: Query<(Entity, Has<Outline>), With<DemoButton>>,
-    focus: Res<InputFocus>,
-    focus_visible: ResMut<InputFocusVisible>,
-    mut commands: Commands,
-) {
-    for (button, has_focus) in query.iter_mut() {
-        let needs_focus = Some(button) == focus.0 && focus_visible.0;
-        if needs_focus != has_focus {
-            if needs_focus {
-                commands.entity(button).insert(Outline {
-                    color: colors::FOCUS.into(),
-                    width: ui::Val::Px(2.0),
-                    offset: ui::Val::Px(1.0),
-                });
-            } else {
-                commands.entity(button).remove::<Outline>();
-            }
-        }
     }
 }
 
@@ -446,30 +413,6 @@ fn update_checkbox_colors(
     }
 }
 
-// Update the checkbox's focus rectangle.
-#[allow(clippy::type_complexity)]
-fn update_checkbox_focus_rect(
-    mut query: Query<(Entity, Has<Outline>), With<DemoCheckbox>>,
-    focus: Res<InputFocus>,
-    focus_visible: ResMut<InputFocusVisible>,
-    mut commands: Commands,
-) {
-    for (checkbox, has_focus) in query.iter_mut() {
-        let needs_focus = Some(checkbox) == focus.0 && focus_visible.0;
-        if needs_focus != has_focus {
-            if needs_focus {
-                commands.entity(checkbox).insert(Outline {
-                    color: colors::FOCUS.into(),
-                    width: ui::Val::Px(2.0),
-                    offset: ui::Val::Px(1.0),
-                });
-            } else {
-                commands.entity(checkbox).remove::<Outline>();
-            }
-        }
-    }
-}
-
 /// Create a column of demo radio buttons
 fn radio_demo() -> impl Bundle {
     (
@@ -617,26 +560,156 @@ fn update_radio_colors(
     }
 }
 
-// Update the button's focus rectangle.
+/// Create a column of demo checkboxes
+fn slider_demo() -> impl Bundle {
+    (
+        Node {
+            display: ui::Display::Flex,
+            flex_direction: ui::FlexDirection::Column,
+            align_items: ui::AlignItems::Start,
+            align_content: ui::AlignContent::Start,
+            width: ui::Val::Px(200.0),
+            padding: ui::UiRect::axes(ui::Val::Px(12.0), ui::Val::Px(0.0)),
+            row_gap: ui::Val::Px(6.0),
+            ..default()
+        },
+        Children::spawn((
+            Spawn(slider(0.0, 100.0, 0.0, None)),
+            Spawn(slider(0.0, 10.0, 5.0, None)),
+        )),
+    )
+}
+
+#[derive(Component, Default)]
+struct DemoSlider;
+
+/// Create a demo slider
+fn slider(min: f32, max: f32, value: f32, on_change: Option<SystemId<In<f32>>>) -> impl Bundle {
+    (
+        Node {
+            display: ui::Display::Flex,
+            flex_direction: ui::FlexDirection::Column,
+            justify_content: ui::JustifyContent::Center,
+            align_self: ui::AlignSelf::Stretch,
+            align_items: ui::AlignItems::Stretch,
+            justify_items: ui::JustifyItems::Center,
+            column_gap: ui::Val::Px(4.0),
+            height: ui::Val::Px(12.0),
+            ..default()
+        },
+        Name::new("Slider"),
+        Hovering::default(),
+        CursorIcon::System(SystemCursorIcon::Pointer),
+        DemoSlider,
+        CoreSlider {
+            max,
+            min,
+            value,
+            on_change,
+        },
+        TabIndex(0),
+        Children::spawn((
+            // Slider background rail
+            Spawn((
+                Node {
+                    height: ui::Val::Px(6.0),
+                    ..default()
+                },
+                BackgroundColor(colors::U3.into()), // Border color for the checkbox
+                BorderRadius::all(ui::Val::Px(3.0)),
+            )),
+            // Invisible track to allow absolute placement of thumb entity. This is narrower than
+            // the actual slider, which allows us to position the thumb entity using simple
+            // percentages, without having to measure the actual width of the slider thumb.
+            Spawn((
+                Node {
+                    display: ui::Display::Flex,
+                    position_type: ui::PositionType::Absolute,
+                    left: ui::Val::Px(0.0),
+                    right: ui::Val::Px(12.0), // Track is short by 12px to accommodate the thumb
+                    top: ui::Val::Px(0.0),
+                    bottom: ui::Val::Px(0.0),
+                    ..default()
+                },
+                children![(
+                    // Thumb
+                    Node {
+                        display: ui::Display::Flex,
+                        width: ui::Val::Px(12.0),
+                        height: ui::Val::Px(12.0),
+                        position_type: ui::PositionType::Absolute,
+                        left: ui::Val::Percent(50.0), // This will be updated by the slider's value
+                        ..default()
+                    },
+                    BorderRadius::all(ui::Val::Px(6.0)),
+                    BackgroundColor(colors::PRIMARY.into()),
+                )],
+            )),
+        )),
+    )
+}
+
+// Update the button's background color.
 #[allow(clippy::type_complexity)]
-fn update_radio_group_focus_rect(
-    mut query: Query<(Entity, Has<Outline>), With<CoreRadioGroup>>,
-    focus: Res<InputFocus>,
-    focus_visible: ResMut<InputFocusVisible>,
-    mut commands: Commands,
+fn update_slider_thumb(
+    mut q_radio: Query<
+        (
+            &CoreSlider,
+            &SliderDragState,
+            &Hovering,
+            Has<InteractionDisabled>,
+            &Children,
+        ),
+        (
+            With<DemoSlider>,
+            Or<(Added<DemoSlider>, Changed<Hovering>, Changed<CoreSlider>)>,
+        ),
+    >,
+    mut q_track: Query<&mut Children, Without<DemoSlider>>,
+    mut q_thumb: Query<(&mut BackgroundColor, &mut Node), (Without<DemoSlider>, Without<Children>)>,
 ) {
-    for (radio, has_focus) in query.iter_mut() {
-        let needs_focus = Some(radio) == focus.0 && focus_visible.0;
-        if needs_focus != has_focus {
-            if needs_focus {
-                commands.entity(radio).insert(Outline {
-                    color: colors::FOCUS.into(),
-                    width: ui::Val::Px(2.0),
-                    offset: ui::Val::Px(1.0),
-                });
-            } else {
-                commands.entity(radio).remove::<Outline>();
-            }
+    for (slider_state, drag_state, Hovering(is_hovering), is_disabled, children) in
+        q_radio.iter_mut()
+    {
+        let color: Color = if is_disabled {
+            // If the slider is disabled, use a lighter color
+            colors::U4.with_alpha(0.2)
+        } else if *is_hovering || drag_state.dragging {
+            // If hovering, use a lighter color
+            colors::U5
+        } else {
+            // Default color for the slider
+            colors::U4
+        }
+        .into();
+
+        let Some(track_id) = children.last() else {
+            warn!("Slider does not have a track entity.");
+            continue;
+        };
+
+        let Ok(track_children) = q_track.get_mut(*track_id) else {
+            continue;
+        };
+
+        let Some(mark_id) = track_children.first() else {
+            warn!("Slider does not have a thumb entity.");
+            continue;
+        };
+
+        let Ok((mut thumb_bg, mut node)) = q_thumb.get_mut(*mark_id) else {
+            warn!("Slider thumb lacking a background color or node.");
+            continue;
+        };
+
+        if thumb_bg.0 != color {
+            // Update the color of the thumb
+            thumb_bg.0 = color;
+        }
+
+        let thumb_position = ui::Val::Percent(slider_state.thumb_position() * 100.0);
+        if node.left != thumb_position {
+            node.left = thumb_position;
         }
     }
 }

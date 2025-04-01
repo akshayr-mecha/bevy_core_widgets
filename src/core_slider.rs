@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemId, prelude::*};
 
 use crate::{InteractionDisabled, ValueChange};
 
@@ -8,19 +8,15 @@ use crate::{InteractionDisabled, ValueChange};
 /// before clamping. It is the receiver's responsibility to update the slider's value when
 /// the value change event is received.
 #[derive(Component, Debug)]
-#[require(DragState)]
+#[require(SliderDragState)]
 pub struct CoreSlider {
     pub value: f32,
     pub min: f32,
     pub max: f32,
+    pub on_change: Option<SystemId<In<f32>>>,
 }
 
 impl CoreSlider {
-    /// Constructg a new [`CoreSlider`].
-    pub fn new(value: f32, min: f32, max: f32) -> Self {
-        Self { value, min, max }
-    }
-
     /// Get the current value of the slider.
     pub fn value(&self) -> f32 {
         self.value
@@ -51,16 +47,16 @@ impl CoreSlider {
 
 /// Component used to manage the state of a slider during dragging.
 #[derive(Component, Default)]
-pub struct DragState {
+pub struct SliderDragState {
     /// Whether the slider is currently being dragged.
-    dragging: bool,
+    pub dragging: bool,
     /// The value of the slider when dragging started.
     offset: f32,
 }
 
 pub(crate) fn slider_on_drag_start(
     mut trigger: Trigger<Pointer<DragStart>>,
-    mut q_state: Query<(&CoreSlider, &mut DragState, Has<InteractionDisabled>)>,
+    mut q_state: Query<(&CoreSlider, &mut SliderDragState, Has<InteractionDisabled>)>,
 ) {
     if let Ok((slider, mut drag, disabled)) = q_state.get_mut(trigger.target()) {
         trigger.propagate(false);
@@ -73,7 +69,7 @@ pub(crate) fn slider_on_drag_start(
 
 pub(crate) fn slider_on_drag(
     mut trigger: Trigger<Pointer<Drag>>,
-    mut q_state: Query<(&ComputedNode, &CoreSlider, &mut DragState)>,
+    mut q_state: Query<(&ComputedNode, &CoreSlider, &mut SliderDragState)>,
     mut commands: Commands,
 ) {
     if let Ok((node, slider, drag)) = q_state.get_mut(trigger.target()) {
@@ -88,14 +84,19 @@ pub(crate) fn slider_on_drag(
             } else {
                 slider.min + range * 0.5
             };
-            commands.trigger_targets(ValueChange(new_value), trigger.target());
+
+            if let Some(on_change) = slider.on_change {
+                commands.run_system_with(on_change, new_value);
+            } else {
+                commands.trigger_targets(ValueChange(new_value), trigger.target());
+            }
         }
     }
 }
 
 pub(crate) fn slider_on_drag_end(
     mut trigger: Trigger<Pointer<DragEnd>>,
-    mut q_state: Query<(&CoreSlider, &mut DragState)>,
+    mut q_state: Query<(&CoreSlider, &mut SliderDragState)>,
 ) {
     if let Ok((_slider, mut drag)) = q_state.get_mut(trigger.target()) {
         trigger.propagate(false);
