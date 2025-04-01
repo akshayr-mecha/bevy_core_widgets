@@ -5,7 +5,7 @@ use bevy::{
     prelude::*,
 };
 
-/// A "brrier" is a backdrop element, one that covers the entire screen, blocks click events
+/// A "barrier" is a backdrop element, one that covers the entire screen, blocks click events
 /// from reaching elements behind it, and can be used to close a dialog or menu.
 ///
 /// The `on_close` field is a system that will be run when the barrier gets a mouse down event.

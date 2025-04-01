@@ -1,4 +1,5 @@
-use bevy::{ecs::system::SystemId, prelude::*};
+use accesskit::Role;
+use bevy::{a11y::AccessibilityNode, ecs::system::SystemId, prelude::*};
 
 use crate::{InteractionDisabled, ValueChange};
 
@@ -9,6 +10,7 @@ use crate::{InteractionDisabled, ValueChange};
 /// the value change event is received.
 #[derive(Component, Debug)]
 #[require(SliderDragState)]
+#[require(AccessibilityNode(accesskit::Node::new(Role::Slider)))]
 pub struct CoreSlider {
     pub value: f32,
     pub min: f32,
