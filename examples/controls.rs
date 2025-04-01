@@ -9,13 +9,13 @@
 use bevy::{
     ecs::system::SystemId,
     input_focus::{
-        tab_navigation::{TabGroup, TabIndex},
-        InputFocus, InputFocusVisible,
+        tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin},
+        InputDispatchPlugin, InputFocus, InputFocusVisible,
     },
     prelude::*,
     ui,
     window::SystemCursorIcon,
-    winit::cursor::CursorIcon,
+    winit::{cursor::CursorIcon, WinitSettings},
 };
 use bevy_core_widgets::{
     hover::Hovering, ButtonClicked, CoreButton, CoreButtonPressed, CoreCheckbox, CoreRadio,
@@ -25,7 +25,13 @@ use bevy_core_widgets::{
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, CoreWidgetsPlugin))
+        .add_plugins((
+            DefaultPlugins,
+            CoreWidgetsPlugin,
+            InputDispatchPlugin,
+            TabNavigationPlugin,
+        ))
+        .insert_resource(WinitSettings::desktop_app())
         .add_systems(Startup, setup_view_root)
         .add_systems(
             Update,

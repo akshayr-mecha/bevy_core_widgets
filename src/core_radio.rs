@@ -16,18 +16,18 @@ use crate::{ButtonClicked, InteractionDisabled};
 /// `Enter` or `Space` key is pressed while the radio button is focused. If the `on_click` field is
 /// `None`, the radio button will emit a `ButtonClicked` event when clicked.
 ///
-/// TODO: According to the WAI-ARIA best practices document, radio buttons should not be focusable,
-/// but rather the enclosing group should be focusable. This is not currently implemented.
+/// According to the WAI-ARIA best practices document, radio buttons should not be focusable,
+/// but rather the enclosing group should be focusable.
 /// See https://www.w3.org/WAI/ARIA/apg/patterns/radio/
 #[derive(Component, Debug)]
 #[require(AccessibilityNode(accesskit::Node::new(Role::RadioButton)))]
-#[component(on_add = on_add_radio)]
+#[component(on_add = on_add_radio, on_replace = on_add_radio)]
 pub struct CoreRadio {
     pub checked: bool,
     pub on_click: Option<SystemId>,
 }
 
-// Hook to set the a11y "checked" state when the radio is added.
+// Hook to set the a11y "checked" state when the radio is added or updated.
 fn on_add_radio(mut world: DeferredWorld, context: HookContext) {
     let mut entt = world.entity_mut(context.entity);
     let radio = entt.get::<CoreRadio>().unwrap();

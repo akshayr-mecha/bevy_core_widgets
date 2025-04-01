@@ -1,7 +1,4 @@
-use bevy::{
-    app::{App, Plugin, Update},
-    input_focus::{tab_navigation, InputDispatchPlugin},
-};
+use bevy::app::{App, Plugin, Update};
 mod core_barrier;
 mod core_button;
 mod core_checkbox;
@@ -32,17 +29,15 @@ use core_slider::CoreSliderPlugin;
 
 impl Plugin for CoreWidgetsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(InputDispatchPlugin)
-            .add_plugins(tab_navigation::TabNavigationPlugin)
-            .add_plugins((
-                CoreButtonPlugin,
-                CoreCheckboxPlugin,
-                CoreRadioPlugin,
-                CoreRadioGroupPlugin,
-                CoreSliderPlugin,
-            ))
-            .add_systems(Update, (hover::update_hover_states, cursor::update_cursor))
-            .add_observer(core_barrier::barrier_on_key_input)
-            .add_observer(core_barrier::barrier_on_pointer_down);
+        app.add_plugins((
+            CoreButtonPlugin,
+            CoreCheckboxPlugin,
+            CoreRadioPlugin,
+            CoreRadioGroupPlugin,
+            CoreSliderPlugin,
+        ))
+        .add_systems(Update, (hover::update_hover_states, cursor::update_cursor))
+        .add_observer(core_barrier::barrier_on_key_input)
+        .add_observer(core_barrier::barrier_on_pointer_down);
     }
 }
