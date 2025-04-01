@@ -7,13 +7,21 @@ use bevy::{
     prelude::*,
 };
 
-use crate::InteractionDisabled;
+use crate::{ButtonClicked, InteractionDisabled};
 
 /// Headless widget implementation for radio buttons. Note that this does not handle the mutual
 /// exclusion of radio buttons in the same group; that should be handled by the parent component.
 /// (This is relatively easy if the parent is a reactive widget.)
+///
+/// The `on_click` field is a system that will be run when the button is clicked, or when the
+/// `Enter` or `Space` key is pressed while the radio button is focused. If the `on_click` field is
+/// `None`, the radio button will emit a `ButtonClicked` event when clicked.
+///
+/// TODO: According to the WAI-ARIA best practices document, radio buttons should not be focusable,
+/// but rather the enclosing group should be focusable. This is not currently implemented.
+/// See https://www.w3.org/WAI/ARIA/apg/patterns/radio/
 #[derive(Component, Debug)]
-#[require(AccessibilityNode(accesskit::Node::new(Role::CheckBox)))]
+#[require(AccessibilityNode(accesskit::Node::new(Role::RadioButton)))]
 #[component(on_add = on_add_radio)]
 pub struct CoreRadio {
     pub checked: bool,
@@ -49,6 +57,8 @@ fn radio_on_key_input(
             if let Some(on_click) = radio.on_click {
                 trigger.propagate(false);
                 commands.run_system(on_click);
+            } else {
+                commands.trigger_targets(ButtonClicked, trigger.target());
             }
         }
     }
@@ -70,6 +80,8 @@ fn radio_on_pointer_click(
         if let Some(on_click) = radio.on_click {
             if !disabled && !is_checked {
                 commands.run_system(on_click);
+            } else {
+                commands.trigger_targets(ButtonClicked, trigger.target());
             }
         }
     }

@@ -4,6 +4,9 @@ use bevy::{
     winit::cursor::CursorIcon,
 };
 
+/// System which updates the window cursor icon whenever the mouse hovers over an entity with
+/// a `CursorIcon` component. If no entity is hovered, the cursor icon is set to
+/// `CursorIcon::default()`.
 pub(crate) fn update_cursor(
     mut commands: Commands,
     hover_map: Option<Res<HoverMap>>,

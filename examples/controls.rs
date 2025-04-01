@@ -44,6 +44,11 @@ fn main() {
 fn setup_view_root(mut commands: Commands) {
     let camera = commands.spawn((Camera::default(), Camera2d)).id();
 
+    // Demonstration click handler.
+    let on_click = commands.register_system(|| {
+        info!("Button on_click handler called!");
+    });
+
     commands.spawn((
         Node {
             display: Display::Flex,
@@ -62,7 +67,7 @@ fn setup_view_root(mut commands: Commands) {
         TabGroup::default(),
         Children::spawn((
             Spawn(Text::new("Button")),
-            Spawn(buttons_demo()),
+            Spawn(buttons_demo(on_click)),
             Spawn(Text::new("Checkbox")),
             Spawn(checkbox_demo()),
             Spawn(Text::new("Radio")),
@@ -84,12 +89,14 @@ fn setup_view_root(mut commands: Commands) {
         )),
     ));
 
+    // Observer for buttons that don't have an on_click handler.
     commands.add_observer(|mut trigger: Trigger<ButtonClicked>| {
         trigger.propagate(false);
         let button_id = trigger.target();
         info!("Got button click event: {:?}", button_id);
     });
 
+    // Observer for checkboxes that don't have an on_change handler.
     commands.add_observer(
         |mut trigger: Trigger<ValueChange<bool>>, mut q_checkbox: Query<&mut CoreCheckbox>| {
             trigger.propagate(false);
@@ -162,7 +169,8 @@ pub enum ButtonVariant {
     Selected,
 }
 
-fn buttons_demo() -> impl Bundle {
+/// Create a row of demo buttons
+fn buttons_demo(on_click: SystemId) -> impl Bundle {
     (
         Node {
             display: ui::Display::Flex,
@@ -175,7 +183,7 @@ fn buttons_demo() -> impl Bundle {
             ..default()
         },
         Children::spawn((
-            Spawn(button("Open...", ButtonVariant::Default, None)),
+            Spawn(button("Open...", ButtonVariant::Default, Some(on_click))),
             Spawn(button("Save", ButtonVariant::Default, None)),
             Spawn(button("Create", ButtonVariant::Primary, None)),
         )),
@@ -187,6 +195,7 @@ struct DemoButton {
     variant: ButtonVariant,
 }
 
+/// Create a demo button
 fn button(caption: &str, variant: ButtonVariant, on_click: Option<SystemId>) -> impl Bundle {
     (
         Node {
@@ -281,6 +290,7 @@ fn update_button_focus_rect(
     }
 }
 
+/// Create a column of demo checkboxes
 fn checkbox_demo() -> impl Bundle {
     (
         Node {
@@ -302,6 +312,7 @@ fn checkbox_demo() -> impl Bundle {
 #[derive(Component, Default)]
 struct DemoCheckbox;
 
+/// Create a demo checkbox
 fn checkbox(caption: &str, checked: bool, on_change: Option<SystemId<In<bool>>>) -> impl Bundle {
     (
         Node {
@@ -358,7 +369,7 @@ fn checkbox(caption: &str, checked: bool, on_change: Option<SystemId<In<bool>>>)
     )
 }
 
-// Update the button's background color.
+// Update the checkbox's background color.
 #[allow(clippy::type_complexity)]
 fn update_checkbox_colors(
     mut q_checkbox: Query<
@@ -430,7 +441,7 @@ fn update_checkbox_colors(
     }
 }
 
-// Update the button's focus rectangle.
+// Update the checkbox's focus rectangle.
 #[allow(clippy::type_complexity)]
 fn update_checkbox_focus_rect(
     mut query: Query<(Entity, Has<Outline>), With<DemoCheckbox>>,
@@ -454,6 +465,7 @@ fn update_checkbox_focus_rect(
     }
 }
 
+/// Create a column of demo radio buttons
 fn radio_demo() -> impl Bundle {
     (
         Node {
@@ -478,6 +490,7 @@ fn radio_demo() -> impl Bundle {
 #[derive(Component, Default)]
 struct DemoRadio;
 
+/// Create a demo radio button
 fn radio(caption: &str, checked: bool, on_click: Option<SystemId>) -> impl Bundle {
     (
         Node {

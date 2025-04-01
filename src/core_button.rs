@@ -1,4 +1,6 @@
+use accesskit::Role;
 use bevy::{
+    a11y::AccessibilityNode,
     ecs::system::SystemId,
     input::keyboard::KeyboardInput,
     input_focus::{FocusedInput, InputFocus, InputFocusVisible},
@@ -11,6 +13,7 @@ use crate::{events::ButtonClicked, InteractionDisabled};
 /// is clicked, or when the Enter or Space key is pressed while the button is focused. If the
 /// `on_click` field is `None`, the button will emit a `ButtonClicked` event when clicked.
 #[derive(Component, Debug)]
+#[require(AccessibilityNode(accesskit::Node::new(Role::Button)))]
 #[require(CoreButtonPressed)]
 pub struct CoreButton {
     pub on_click: Option<SystemId>,
