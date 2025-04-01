@@ -2,8 +2,7 @@ use accesskit::Role;
 use bevy::{
     a11y::AccessibilityNode,
     ecs::{component::HookContext, system::SystemId, world::DeferredWorld},
-    input::{keyboard::KeyboardInput, ButtonState},
-    input_focus::{FocusedInput, InputFocus, InputFocusVisible},
+    input_focus::{InputFocus, InputFocusVisible},
     prelude::*,
 };
 
@@ -40,30 +39,6 @@ fn on_add_radio(mut world: DeferredWorld, context: HookContext) {
     });
 }
 
-fn radio_on_key_input(
-    mut trigger: Trigger<FocusedInput<KeyboardInput>>,
-    q_state: Query<(&CoreRadio, Has<InteractionDisabled>)>,
-    mut commands: Commands,
-) {
-    if let Ok((radio, disabled)) = q_state.get(trigger.target()) {
-        let event = &trigger.event().input;
-        let is_checked = radio.checked;
-        if !disabled
-            && event.state == ButtonState::Pressed
-            && !event.repeat
-            && (event.key_code == KeyCode::Enter || event.key_code == KeyCode::Space)
-            && !is_checked
-        {
-            if let Some(on_click) = radio.on_click {
-                trigger.propagate(false);
-                commands.run_system(on_click);
-            } else {
-                commands.trigger_targets(ButtonClicked, trigger.target());
-            }
-        }
-    }
-}
-
 fn radio_on_pointer_click(
     mut trigger: Trigger<Pointer<Click>>,
     q_state: Query<(&CoreRadio, Has<InteractionDisabled>)>,
@@ -76,13 +51,14 @@ fn radio_on_pointer_click(
         focus.0 = Some(checkbox_id);
         focus_visible.0 = false;
         trigger.propagate(false);
-        let is_checked = radio.checked;
+        if radio.checked || disabled {
+            // If the radio is already checked, or disabled, we do nothing.
+            return;
+        }
         if let Some(on_click) = radio.on_click {
-            if !disabled && !is_checked {
-                commands.run_system(on_click);
-            } else {
-                commands.trigger_targets(ButtonClicked, trigger.target());
-            }
+            commands.run_system(on_click);
+        } else {
+            commands.trigger_targets(ButtonClicked, trigger.target());
         }
     }
 }
@@ -91,7 +67,6 @@ pub struct CoreRadioPlugin;
 
 impl Plugin for CoreRadioPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(radio_on_key_input)
-            .add_observer(radio_on_pointer_click);
+        app.add_observer(radio_on_pointer_click);
     }
 }

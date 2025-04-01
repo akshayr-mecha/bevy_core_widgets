@@ -19,7 +19,7 @@ use bevy::{
 };
 use bevy_core_widgets::{
     hover::Hovering, ButtonClicked, CoreButton, CoreButtonPressed, CoreCheckbox, CoreRadio,
-    CoreWidgetsPlugin, InteractionDisabled, ValueChange,
+    CoreRadioGroup, CoreWidgetsPlugin, InteractionDisabled, ValueChange,
 };
 
 fn main() {
@@ -34,7 +34,7 @@ fn main() {
                 update_checkbox_colors,
                 update_checkbox_focus_rect,
                 update_radio_colors,
-                update_radio_focus_rect,
+                update_radio_group_focus_rect,
                 close_on_esc,
             ),
         )
@@ -90,11 +90,16 @@ fn setup_view_root(mut commands: Commands) {
     ));
 
     // Observer for buttons that don't have an on_click handler.
-    commands.add_observer(|mut trigger: Trigger<ButtonClicked>| {
-        trigger.propagate(false);
-        let button_id = trigger.target();
-        info!("Got button click event: {:?}", button_id);
-    });
+    commands.add_observer(
+        |mut trigger: Trigger<ButtonClicked>, q_button: Query<&CoreButton>| {
+            // If the button doesn't exist or is not a CoreButton
+            if q_button.get(trigger.target()).is_ok() {
+                trigger.propagate(false);
+                let button_id = trigger.target();
+                info!("Got button click event: {:?}", button_id);
+            }
+        },
+    );
 
     // Observer for checkboxes that don't have an on_change handler.
     commands.add_observer(
@@ -477,6 +482,8 @@ fn radio_demo() -> impl Bundle {
             row_gap: ui::Val::Px(6.0),
             ..default()
         },
+        TabIndex(0),
+        CoreRadioGroup,
         Children::spawn((
             Spawn(radio("WKRP", true, None)),
             Spawn(radio("WPIG", false, None)),
@@ -507,7 +514,6 @@ fn radio(caption: &str, checked: bool, on_click: Option<SystemId>) -> impl Bundl
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoRadio,
         CoreRadio { on_click, checked },
-        TabIndex(0),
         Children::spawn((
             Spawn((
                 // Radio outer
@@ -613,8 +619,8 @@ fn update_radio_colors(
 
 // Update the button's focus rectangle.
 #[allow(clippy::type_complexity)]
-fn update_radio_focus_rect(
-    mut query: Query<(Entity, Has<Outline>), With<DemoRadio>>,
+fn update_radio_group_focus_rect(
+    mut query: Query<(Entity, Has<Outline>), With<CoreRadioGroup>>,
     focus: Res<InputFocus>,
     focus_visible: ResMut<InputFocusVisible>,
     mut commands: Commands,
