@@ -105,3 +105,13 @@ pub(crate) fn slider_on_drag_end(
         }
     }
 }
+
+pub struct CoreSliderPlugin;
+
+impl Plugin for CoreSliderPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_observer(slider_on_drag_start)
+            .add_observer(slider_on_drag_end)
+            .add_observer(slider_on_drag);
+    }
+}

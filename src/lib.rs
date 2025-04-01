@@ -28,6 +28,7 @@ use core_button::CoreButtonPlugin;
 use core_checkbox::CoreCheckboxPlugin;
 use core_radio::CoreRadioPlugin;
 use core_radio_group::CoreRadioGroupPlugin;
+use core_slider::CoreSliderPlugin;
 
 impl Plugin for CoreWidgetsPlugin {
     fn build(&self, app: &mut App) {
@@ -38,12 +39,10 @@ impl Plugin for CoreWidgetsPlugin {
                 CoreCheckboxPlugin,
                 CoreRadioPlugin,
                 CoreRadioGroupPlugin,
+                CoreSliderPlugin,
             ))
             .add_systems(Update, (hover::update_hover_states, cursor::update_cursor))
             .add_observer(core_barrier::barrier_on_key_input)
-            .add_observer(core_barrier::barrier_on_pointer_down)
-            .add_observer(core_slider::slider_on_drag_start)
-            .add_observer(core_slider::slider_on_drag_end)
-            .add_observer(core_slider::slider_on_drag);
+            .add_observer(core_barrier::barrier_on_pointer_down);
     }
 }
