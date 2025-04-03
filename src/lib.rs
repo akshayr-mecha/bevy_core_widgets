@@ -8,36 +8,29 @@ mod core_slider;
 mod cursor;
 mod events;
 pub mod hover;
-mod interaction_disabled;
+mod interaction_states;
 
-pub use core_barrier::CoreBarrier;
-pub use core_button::{CoreButton, CoreButtonPressed};
-pub use core_checkbox::CoreCheckbox;
-pub use core_radio::CoreRadio;
-pub use core_radio_group::CoreRadioGroup;
-pub use core_slider::{CoreSlider, SliderDragState};
+pub use core_barrier::{CoreBarrier, CoreBarrierPlugin};
+pub use core_button::{CoreButton, CoreButtonPlugin};
+pub use core_checkbox::{CoreCheckbox, CoreCheckboxPlugin};
+pub use core_radio::{CoreRadio, CoreRadioPlugin};
+pub use core_radio_group::{CoreRadioGroup, CoreRadioGroupPlugin};
+pub use core_slider::{CoreSlider, CoreSliderPlugin, SliderDragState};
 pub use events::{ButtonClicked, ValueChange};
-pub use interaction_disabled::InteractionDisabled;
+pub use interaction_states::{ButtonPressed, Checked, InteractionDisabled};
 
 pub struct CoreWidgetsPlugin;
-
-use core_button::CoreButtonPlugin;
-use core_checkbox::CoreCheckboxPlugin;
-use core_radio::CoreRadioPlugin;
-use core_radio_group::CoreRadioGroupPlugin;
-use core_slider::CoreSliderPlugin;
 
 impl Plugin for CoreWidgetsPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins((
+            CoreBarrierPlugin,
             CoreButtonPlugin,
             CoreCheckboxPlugin,
             CoreRadioPlugin,
             CoreRadioGroupPlugin,
             CoreSliderPlugin,
         ))
-        .add_systems(Update, (hover::update_hover_states, cursor::update_cursor))
-        .add_observer(core_barrier::barrier_on_key_input)
-        .add_observer(core_barrier::barrier_on_pointer_down);
+        .add_systems(Update, (hover::update_hover_states, cursor::update_cursor));
     }
 }

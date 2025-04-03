@@ -7,20 +7,17 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{events::ButtonClicked, InteractionDisabled};
+use crate::{events::ButtonClicked, ButtonPressed, InteractionDisabled};
 
 /// Headless button widget. The `on_click` field is a system that will be run when the button
 /// is clicked, or when the Enter or Space key is pressed while the button is focused. If the
 /// `on_click` field is `None`, the button will emit a `ButtonClicked` event when clicked.
 #[derive(Component, Debug)]
 #[require(AccessibilityNode(accesskit::Node::new(Role::Button)))]
-#[require(CoreButtonPressed)]
+#[require(ButtonPressed)]
 pub struct CoreButton {
     pub on_click: Option<SystemId>,
 }
-
-#[derive(Component, Default, Debug)]
-pub struct CoreButtonPressed(pub bool);
 
 pub(crate) fn button_on_key_event(
     mut trigger: Trigger<FocusedInput<KeyboardInput>>,
@@ -46,11 +43,7 @@ pub(crate) fn button_on_key_event(
 
 pub(crate) fn button_on_pointer_click(
     mut trigger: Trigger<Pointer<Click>>,
-    mut q_state: Query<(
-        &CoreButton,
-        &mut CoreButtonPressed,
-        Has<InteractionDisabled>,
-    )>,
+    mut q_state: Query<(&CoreButton, &mut ButtonPressed, Has<InteractionDisabled>)>,
     mut commands: Commands,
 ) {
     if let Ok((bstate, pressed, disabled)) = q_state.get_mut(trigger.target()) {
@@ -67,7 +60,7 @@ pub(crate) fn button_on_pointer_click(
 
 pub(crate) fn button_on_pointer_down(
     mut trigger: Trigger<Pointer<Pressed>>,
-    mut q_state: Query<(&mut CoreButtonPressed, Has<InteractionDisabled>)>,
+    mut q_state: Query<(&mut ButtonPressed, Has<InteractionDisabled>)>,
     mut focus: ResMut<InputFocus>,
     mut focus_visible: ResMut<InputFocusVisible>,
 ) {
@@ -83,7 +76,7 @@ pub(crate) fn button_on_pointer_down(
 
 pub(crate) fn button_on_pointer_up(
     mut trigger: Trigger<Pointer<Released>>,
-    mut q_state: Query<(&mut CoreButtonPressed, Has<InteractionDisabled>)>,
+    mut q_state: Query<(&mut ButtonPressed, Has<InteractionDisabled>)>,
 ) {
     if let Ok((mut pressed, disabled)) = q_state.get_mut(trigger.target()) {
         trigger.propagate(false);
@@ -95,7 +88,7 @@ pub(crate) fn button_on_pointer_up(
 
 pub(crate) fn button_on_pointer_drag_end(
     mut trigger: Trigger<Pointer<DragEnd>>,
-    mut q_state: Query<(&mut CoreButtonPressed, Has<InteractionDisabled>)>,
+    mut q_state: Query<(&mut ButtonPressed, Has<InteractionDisabled>)>,
 ) {
     if let Ok((mut pressed, disabled)) = q_state.get_mut(trigger.target()) {
         trigger.propagate(false);
@@ -107,7 +100,7 @@ pub(crate) fn button_on_pointer_drag_end(
 
 pub(crate) fn button_on_pointer_cancel(
     mut trigger: Trigger<Pointer<Cancel>>,
-    mut q_state: Query<(&mut CoreButtonPressed, Has<InteractionDisabled>)>,
+    mut q_state: Query<(&mut ButtonPressed, Has<InteractionDisabled>)>,
 ) {
     if let Ok((mut pressed, disabled)) = q_state.get_mut(trigger.target()) {
         trigger.propagate(false);

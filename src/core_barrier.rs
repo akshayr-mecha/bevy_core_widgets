@@ -50,3 +50,12 @@ pub(crate) fn barrier_on_pointer_down(
         }
     }
 }
+
+pub struct CoreBarrierPlugin;
+
+impl Plugin for CoreBarrierPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_observer(barrier_on_key_input)
+            .add_observer(barrier_on_pointer_down);
+    }
+}

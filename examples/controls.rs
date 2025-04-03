@@ -18,7 +18,7 @@ use bevy::{
     winit::{cursor::CursorIcon, WinitSettings},
 };
 use bevy_core_widgets::{
-    hover::Hovering, ButtonClicked, CoreButton, CoreButtonPressed, CoreCheckbox, CoreRadio,
+    hover::Hovering, ButtonClicked, ButtonPressed, Checked, CoreButton, CoreCheckbox, CoreRadio,
     CoreRadioGroup, CoreSlider, CoreWidgetsPlugin, InteractionDisabled, SliderDragState,
     ValueChange,
 };
@@ -99,12 +99,42 @@ fn setup_view_root(mut commands: Commands) {
 
     // Observer for checkboxes that don't have an on_change handler.
     commands.add_observer(
-        |mut trigger: Trigger<ValueChange<bool>>, mut q_checkbox: Query<&mut CoreCheckbox>| {
+        |mut trigger: Trigger<ValueChange<bool>>,
+         q_checkbox: Query<&CoreCheckbox>,
+         mut commands: Commands| {
             trigger.propagate(false);
-            if let Ok(mut checkbox) = q_checkbox.get_mut(trigger.target()) {
+            if q_checkbox.contains(trigger.target()) {
                 // Update checkbox state from event.
-                checkbox.checked = trigger.event().0;
-                info!("New checkbox state: {:?}", checkbox.checked);
+                let is_checked = trigger.event().0;
+                commands
+                    .entity(trigger.target())
+                    .insert(Checked(is_checked));
+                info!("New checkbox state: {:?}", is_checked);
+            }
+        },
+    );
+
+    // Observer for radio buttons.
+    commands.add_observer(
+        |mut trigger: Trigger<ValueChange<Entity>>,
+         q_radio_group: Query<&Children, With<CoreRadioGroup>>,
+         q_radio: Query<(&ChildOf, &RadioValue), With<CoreRadio>>,
+         mut commands: Commands| {
+            trigger.propagate(false);
+            if q_radio_group.contains(trigger.target()) {
+                // Update checkbox state from event.
+                let selected_entity = trigger.event().0;
+                let (child_of, radio_value) = q_radio.get(selected_entity).unwrap();
+                // Mutual exclusion logic
+                let group_children = q_radio_group.get(child_of.parent).unwrap();
+                for radio_child in group_children.iter() {
+                    if let Ok((_, value)) = q_radio.get(radio_child) {
+                        commands
+                            .entity(radio_child)
+                            .insert(Checked(value.0 == radio_value.0));
+                    }
+                }
+                info!("Radio Value: {}", radio_value.0);
             }
         },
     );
@@ -236,17 +266,13 @@ fn update_button_bg_colors(
             &DemoButton,
             &mut BackgroundColor,
             &Hovering,
-            &CoreButtonPressed,
+            &ButtonPressed,
             Has<InteractionDisabled>,
         ),
-        Or<(
-            Added<DemoButton>,
-            Changed<Hovering>,
-            Changed<CoreButtonPressed>,
-        )>,
+        Or<(Added<DemoButton>, Changed<Hovering>, Changed<ButtonPressed>)>,
     >,
 ) {
-    for (button, mut bg_color, Hovering(is_hovering), CoreButtonPressed(is_pressed), is_disabled) in
+    for (button, mut bg_color, Hovering(is_hovering), ButtonPressed(is_pressed), is_disabled) in
         query.iter_mut()
     {
         // Update the background color based on the button's state
@@ -306,7 +332,8 @@ fn checkbox(caption: &str, checked: bool, on_change: Option<SystemId<In<bool>>>)
         Hovering::default(),
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoCheckbox,
-        CoreCheckbox { on_change, checked },
+        CoreCheckbox { on_change },
+        Checked(checked),
         TabIndex(0),
         Children::spawn((
             Spawn((
@@ -351,25 +378,16 @@ fn checkbox(caption: &str, checked: bool, on_change: Option<SystemId<In<bool>>>)
 #[allow(clippy::type_complexity)]
 fn update_checkbox_colors(
     mut q_checkbox: Query<
-        (
-            &CoreCheckbox,
-            &Hovering,
-            Has<InteractionDisabled>,
-            &Children,
-        ),
+        (&Checked, &Hovering, Has<InteractionDisabled>, &Children),
         (
             With<DemoCheckbox>,
-            Or<(
-                Added<DemoCheckbox>,
-                Changed<Hovering>,
-                Changed<CoreCheckbox>,
-            )>,
+            Or<(Added<DemoCheckbox>, Changed<Hovering>, Changed<Checked>)>,
         ),
     >,
     mut q_border_color: Query<(&mut BorderColor, &mut Children), Without<DemoCheckbox>>,
     mut q_bg_color: Query<&mut BackgroundColor, (Without<DemoCheckbox>, Without<Children>)>,
 ) {
-    for (checkbox_state, Hovering(is_hovering), is_disabled, children) in q_checkbox.iter_mut() {
+    for (Checked(checked), Hovering(is_hovering), is_disabled, children) in q_checkbox.iter_mut() {
         let color: Color = if is_disabled {
             // If the checkbox is disabled, use a lighter color
             colors::U4.with_alpha(0.2)
@@ -405,7 +423,7 @@ fn update_checkbox_colors(
             continue;
         };
 
-        let mark_color: Color = match (is_disabled, checkbox_state.checked) {
+        let mark_color: Color = match (is_disabled, *checked) {
             (true, true) => colors::PRIMARY.with_alpha(0.5),
             (false, true) => colors::PRIMARY,
             (_, false) => Srgba::NONE,
@@ -432,13 +450,13 @@ fn radio_demo() -> impl Bundle {
             ..default()
         },
         TabIndex(0),
-        CoreRadioGroup,
+        CoreRadioGroup { on_change: None },
         Children::spawn((
-            Spawn(radio("WKRP", true, None)),
-            Spawn(radio("WPIG", false, None)),
-            Spawn(radio("Galaxy News Radio", false, None)),
-            Spawn(radio("KBBL-FM", false, None)),
-            Spawn(radio("Radio Rock", false, None)),
+            Spawn(radio("WKRP", true)),
+            Spawn(radio("WPIG", false)),
+            Spawn(radio("Galaxy News Radio", false)),
+            Spawn(radio("KBBL-FM", false)),
+            Spawn(radio("Radio Rock", false)),
         )),
     )
 }
@@ -446,8 +464,11 @@ fn radio_demo() -> impl Bundle {
 #[derive(Component, Default)]
 struct DemoRadio;
 
+#[derive(Component, Default)]
+struct RadioValue(String);
+
 /// Create a demo radio button
-fn radio(caption: &str, checked: bool, on_click: Option<SystemId>) -> impl Bundle {
+fn radio(caption: &str, checked: bool) -> impl Bundle {
     (
         Node {
             display: ui::Display::Flex,
@@ -462,7 +483,9 @@ fn radio(caption: &str, checked: bool, on_click: Option<SystemId>) -> impl Bundl
         Hovering::default(),
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoRadio,
-        CoreRadio { on_click, checked },
+        CoreRadio,
+        Checked(checked),
+        RadioValue(caption.to_string()),
         Children::spawn((
             Spawn((
                 // Radio outer
@@ -507,16 +530,16 @@ fn radio(caption: &str, checked: bool, on_click: Option<SystemId>) -> impl Bundl
 #[allow(clippy::type_complexity)]
 fn update_radio_colors(
     mut q_radio: Query<
-        (&CoreRadio, &Hovering, Has<InteractionDisabled>, &Children),
+        (&Checked, &Hovering, Has<InteractionDisabled>, &Children),
         (
             With<DemoRadio>,
-            Or<(Added<DemoRadio>, Changed<Hovering>, Changed<CoreRadio>)>,
+            Or<(Added<DemoRadio>, Changed<Hovering>, Changed<Checked>)>,
         ),
     >,
     mut q_border_color: Query<(&mut BorderColor, &mut Children), Without<DemoRadio>>,
     mut q_bg_color: Query<&mut BackgroundColor, (Without<DemoRadio>, Without<Children>)>,
 ) {
-    for (radio_state, Hovering(is_hovering), is_disabled, children) in q_radio.iter_mut() {
+    for (Checked(checked), Hovering(is_hovering), is_disabled, children) in q_radio.iter_mut() {
         let color: Color = if is_disabled {
             // If the radio is disabled, use a lighter color
             colors::U4.with_alpha(0.2)
@@ -552,7 +575,7 @@ fn update_radio_colors(
             continue;
         };
 
-        let mark_color: Color = match (is_disabled, radio_state.checked) {
+        let mark_color: Color = match (is_disabled, *checked) {
             (true, true) => colors::PRIMARY.with_alpha(0.5),
             (false, true) => colors::PRIMARY,
             (_, false) => Srgba::NONE,
