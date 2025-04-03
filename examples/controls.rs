@@ -7,7 +7,8 @@
 //! functionality of the core widgets with minimal dependencies.
 
 use bevy::{
-    ecs::system::SystemId,
+    a11y::AccessibilityNode,
+    ecs::{component::HookContext, system::SystemId, world::DeferredWorld},
     input_focus::{
         tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin},
         InputDispatchPlugin, InputFocus, InputFocusVisible,
@@ -247,6 +248,7 @@ fn button(caption: &str, variant: ButtonVariant, on_click: Option<SystemId>) -> 
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoButton { variant },
         CoreButton { on_click },
+        AccessibleName(caption.to_string()),
         TabIndex(0),
         children![(
             Text::new(caption),
@@ -329,6 +331,7 @@ fn checkbox(caption: &str, checked: bool, on_change: Option<SystemId<In<bool>>>)
             ..default()
         },
         Name::new("Checkbox"),
+        AccessibleName(caption.to_string()),
         Hovering::default(),
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoCheckbox,
@@ -480,6 +483,7 @@ fn radio(caption: &str, checked: bool) -> impl Bundle {
             ..default()
         },
         Name::new("Radio"),
+        AccessibleName(caption.to_string()),
         Hovering::default(),
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoRadio,
@@ -743,15 +747,25 @@ fn update_slider_thumb(
     }
 }
 
+#[derive(Component, Default)]
+#[component(immutable, on_add = on_set_label, on_replace = on_set_label)]
+struct AccessibleName(String);
+
+// Hook to set the a11y "checked" state when the checkbox is added.
+fn on_set_label(mut world: DeferredWorld, context: HookContext) {
+    let mut entt = world.entity_mut(context.entity);
+    let name = entt.get::<AccessibleName>().unwrap().0.clone();
+    if let Some(mut accessibility) = entt.get_mut::<AccessibilityNode>() {
+        accessibility.set_label(name.as_str());
+    }
+}
+
 mod colors {
     use bevy::color::Srgba;
 
-    // pub const U1: Srgba = Srgba::new(0.094, 0.094, 0.102, 1.0);
-    // pub const U2: Srgba = Srgba::new(0.137, 0.137, 0.149, 1.0);
     pub const U3: Srgba = Srgba::new(0.224, 0.224, 0.243, 1.0);
     pub const U4: Srgba = Srgba::new(0.486, 0.486, 0.529, 1.0);
     pub const U5: Srgba = Srgba::new(1.0, 1.0, 1.0, 1.0);
-    // pub const FOREGROUND: Srgba = Srgba::new(0.925, 0.925, 0.925, 1.0);
     pub const PRIMARY: Srgba = Srgba::new(0.341, 0.435, 0.525, 1.0);
     pub const DESTRUCTIVE: Srgba = Srgba::new(0.525, 0.341, 0.404, 1.0);
     pub const FOCUS: Srgba = Srgba::new(0.055, 0.647, 0.914, 0.15);
