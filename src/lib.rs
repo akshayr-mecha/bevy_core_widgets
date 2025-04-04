@@ -16,6 +16,7 @@ pub use core_checkbox::{CoreCheckbox, CoreCheckboxPlugin};
 pub use core_radio::{CoreRadio, CoreRadioPlugin};
 pub use core_radio_group::{CoreRadioGroup, CoreRadioGroupPlugin};
 pub use core_slider::{CoreSlider, CoreSliderPlugin, SliderDragState};
+pub use cursor::CursorIconPlugin;
 pub use events::{ButtonClicked, ValueChange};
 pub use interaction_states::{ButtonPressed, Checked, InteractionDisabled};
 
@@ -30,7 +31,8 @@ impl Plugin for CoreWidgetsPlugin {
             CoreRadioPlugin,
             CoreRadioGroupPlugin,
             CoreSliderPlugin,
+            CursorIconPlugin,
         ))
-        .add_systems(Update, (hover::update_hover_states, cursor::update_cursor));
+        .add_systems(Update, hover::update_hover_states);
     }
 }

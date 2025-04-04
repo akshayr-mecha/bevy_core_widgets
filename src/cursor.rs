@@ -4,6 +4,11 @@ use bevy::{
     winit::cursor::CursorIcon,
 };
 
+/// A component that specifies the cursor icon to be used when the mouse is not hovering over
+/// any other entity. This is used to set the default cursor icon for the window.
+#[derive(Resource, Debug, Clone, Default)]
+pub struct DefaultCursorIcon(pub CursorIcon);
+
 /// System which updates the window cursor icon whenever the mouse hovers over an entity with
 /// a `CursorIcon` component. If no entity is hovered, the cursor icon is set to
 /// `CursorIcon::default()`.
@@ -13,6 +18,7 @@ pub(crate) fn update_cursor(
     parent_query: Query<&ChildOf>,
     cursor_query: Query<&CursorIcon>,
     mut q_windows: Query<(Entity, &mut Window, Option<&CursorIcon>)>,
+    r_default_cursor: Res<DefaultCursorIcon>,
 ) {
     let cursor = hover_map.and_then(|hover_map| match hover_map.get(&PointerId::Mouse) {
         Some(hover_set) => hover_set.keys().find_map(|entity| {
@@ -39,7 +45,18 @@ pub(crate) fn update_cursor(
         if let Some(cursor) = cursor {
             commands.entity(*entity).insert(cursor.clone());
         } else {
-            commands.entity(*entity).insert(CursorIcon::default());
+            commands.entity(*entity).insert(r_default_cursor.0.clone());
         }
     });
+}
+
+pub struct CursorIconPlugin;
+
+impl Plugin for CursorIconPlugin {
+    fn build(&self, app: &mut App) {
+        if app.world().get_resource::<DefaultCursorIcon>().is_none() {
+            app.init_resource::<DefaultCursorIcon>();
+        }
+        app.add_systems(Update, update_cursor);
+    }
 }
