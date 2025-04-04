@@ -607,8 +607,8 @@ fn slider_demo() -> impl Bundle {
             ..default()
         },
         Children::spawn((
-            Spawn(slider(0.0, 100.0, 0.0, None)),
-            Spawn(slider(0.0, 10.0, 5.0, None)),
+            Spawn(slider("Volume", 0.0, 100.0, 0.0, None)),
+            Spawn(slider("Difficulty", 0.0, 10.0, 5.0, None)),
         )),
     )
 }
@@ -617,7 +617,13 @@ fn slider_demo() -> impl Bundle {
 struct DemoSlider;
 
 /// Create a demo slider
-fn slider(min: f32, max: f32, value: f32, on_change: Option<SystemId<In<f32>>>) -> impl Bundle {
+fn slider(
+    label: &str,
+    min: f32,
+    max: f32,
+    value: f32,
+    on_change: Option<SystemId<In<f32>>>,
+) -> impl Bundle {
     (
         Node {
             display: ui::Display::Flex,
@@ -631,6 +637,7 @@ fn slider(min: f32, max: f32, value: f32, on_change: Option<SystemId<In<f32>>>) 
             ..default()
         },
         Name::new("Slider"),
+        AccessibleName(label.to_string()),
         Hovering::default(),
         CursorIcon::System(SystemCursorIcon::Pointer),
         DemoSlider,
@@ -639,6 +646,8 @@ fn slider(min: f32, max: f32, value: f32, on_change: Option<SystemId<In<f32>>>) 
             min,
             value,
             on_change,
+            thumb_size: 12.0,
+            ..default()
         },
         TabIndex(0),
         Children::spawn((

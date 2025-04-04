@@ -1,5 +1,11 @@
 use accesskit::Role;
-use bevy::{a11y::AccessibilityNode, ecs::system::SystemId, prelude::*};
+use bevy::{
+    a11y::AccessibilityNode,
+    ecs::system::SystemId,
+    input::{keyboard::KeyboardInput, ButtonState},
+    input_focus::{FocusedInput, InputFocus, InputFocusVisible},
+    prelude::*,
+};
 
 use crate::{InteractionDisabled, ValueChange};
 
@@ -15,7 +21,22 @@ pub struct CoreSlider {
     pub value: f32,
     pub min: f32,
     pub max: f32,
+    pub increment: f32,
+    pub thumb_size: f32,
     pub on_change: Option<SystemId<In<f32>>>,
+}
+
+impl Default for CoreSlider {
+    fn default() -> Self {
+        Self {
+            value: 0.5,
+            min: 0.0,
+            max: 1.0,
+            increment: 1.0,
+            thumb_size: 0.0,
+            on_change: None,
+        }
+    }
 }
 
 impl CoreSlider {
@@ -56,6 +77,19 @@ pub struct SliderDragState {
     offset: f32,
 }
 
+pub(crate) fn slider_on_pointer_down(
+    trigger: Trigger<Pointer<Pressed>>,
+    q_state: Query<(), With<CoreSlider>>,
+    mut focus: ResMut<InputFocus>,
+    mut focus_visible: ResMut<InputFocusVisible>,
+) {
+    if q_state.contains(trigger.target()) {
+        // Set focus to slider and hide focus ring
+        focus.0 = Some(trigger.target());
+        focus_visible.0 = false;
+    }
+}
+
 pub(crate) fn slider_on_drag_start(
     mut trigger: Trigger<Pointer<DragStart>>,
     mut q_state: Query<(&CoreSlider, &mut SliderDragState, Has<InteractionDisabled>)>,
@@ -79,7 +113,8 @@ pub(crate) fn slider_on_drag(
         if drag.dragging {
             let distance = trigger.event().distance;
             // Measure node width and slider value.
-            let slider_width = node.size().x * node.inverse_scale_factor;
+            let slider_width =
+                (node.size().x * node.inverse_scale_factor - slider.thumb_size).max(1.0);
             let range = slider.max - slider.min;
             let new_value = if range > 0. {
                 drag.offset + (distance.x * range) / slider_width
@@ -108,12 +143,48 @@ pub(crate) fn slider_on_drag_end(
     }
 }
 
+fn slider_on_key_input(
+    mut trigger: Trigger<FocusedInput<KeyboardInput>>,
+    q_state: Query<(&CoreSlider, Has<InteractionDisabled>)>,
+    mut commands: Commands,
+) {
+    if let Ok((slider, disabled)) = q_state.get(trigger.target()) {
+        let event = &trigger.event().input;
+        if !disabled && event.state == ButtonState::Pressed {
+            let new_value = match event.key_code {
+                KeyCode::ArrowLeft => (slider.value - slider.increment).max(slider.min),
+                KeyCode::ArrowRight => (slider.value + slider.increment).min(slider.max),
+                _ => {
+                    return;
+                }
+            };
+            trigger.propagate(false);
+            if let Some(on_change) = slider.on_change {
+                commands.run_system_with(on_change, new_value);
+            } else {
+                commands.trigger_targets(ValueChange(new_value), trigger.target());
+            }
+        }
+    }
+}
+
+fn update_slider_a11y(mut q_state: Query<(&CoreSlider, &mut AccessibilityNode)>) {
+    for (slider, mut node) in q_state.iter_mut() {
+        node.set_numeric_value(slider.value.into());
+        node.set_min_numeric_value(slider.min.into());
+        node.set_max_numeric_value(slider.max.into());
+    }
+}
+
 pub struct CoreSliderPlugin;
 
 impl Plugin for CoreSliderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_observer(slider_on_drag_start)
+        app.add_observer(slider_on_pointer_down)
+            .add_observer(slider_on_drag_start)
             .add_observer(slider_on_drag_end)
-            .add_observer(slider_on_drag);
+            .add_observer(slider_on_drag)
+            .add_observer(slider_on_key_input)
+            .add_systems(PostUpdate, update_slider_a11y);
     }
 }

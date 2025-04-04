@@ -3,7 +3,7 @@ use bevy::{
     a11y::AccessibilityNode,
     ecs::system::SystemId,
     input::{keyboard::KeyboardInput, ButtonState},
-    input_focus::FocusedInput,
+    input_focus::{FocusedInput, InputFocus, InputFocusVisible},
     prelude::*,
 };
 
@@ -117,6 +117,8 @@ fn radio_group_on_button_click(
     mut trigger: Trigger<ButtonClicked>,
     q_group: Query<(&CoreRadioGroup, &Children)>,
     q_radio: Query<(&Checked, &ChildOf, Has<InteractionDisabled>), With<CoreRadio>>,
+    mut focus: ResMut<InputFocus>,
+    mut focus_visible: ResMut<InputFocusVisible>,
     mut commands: Commands,
 ) {
     let radio_id = trigger.target();
@@ -133,6 +135,10 @@ fn radio_group_on_button_click(
         warn!("Radio button clicked without a valid CoreRadioGroup parent");
         return;
     };
+
+    // Set focus to group and hide focus ring
+    focus.0 = Some(group_id);
+    focus_visible.0 = false;
 
     // Get all the radio group children.
     let radio_children = group_children
