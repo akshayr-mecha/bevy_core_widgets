@@ -1,4 +1,4 @@
-use accesskit::Role;
+use accesskit::{Orientation, Role};
 use bevy::{
     a11y::AccessibilityNode,
     ecs::system::SystemId,
@@ -154,6 +154,8 @@ fn slider_on_key_input(
             let new_value = match event.key_code {
                 KeyCode::ArrowLeft => (slider.value - slider.increment).max(slider.min),
                 KeyCode::ArrowRight => (slider.value + slider.increment).min(slider.max),
+                KeyCode::Home => slider.min,
+                KeyCode::End => slider.max,
                 _ => {
                     return;
                 }
@@ -173,6 +175,8 @@ fn update_slider_a11y(mut q_state: Query<(&CoreSlider, &mut AccessibilityNode)>)
         node.set_numeric_value(slider.value.into());
         node.set_min_numeric_value(slider.min.into());
         node.set_max_numeric_value(slider.max.into());
+        node.set_numeric_value_step(slider.increment.into());
+        node.set_orientation(Orientation::Horizontal);
     }
 }
 
