@@ -129,7 +129,7 @@ fn radio_group_on_button_click(
     };
 
     // Find the parent CoreRadioGroup of the clicked radio button.
-    let group_id = child_of.parent;
+    let group_id = child_of.parent();
     let Ok((CoreRadioGroup { on_change }, group_children)) = q_group.get(group_id) else {
         // The radio button's parent is not a CoreRadioGroup, ignore the click
         warn!("Radio button clicked without a valid CoreRadioGroup parent");

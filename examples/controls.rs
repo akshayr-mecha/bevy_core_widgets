@@ -127,7 +127,7 @@ fn setup_view_root(mut commands: Commands) {
                 let selected_entity = trigger.event().0;
                 let (child_of, radio_value) = q_radio.get(selected_entity).unwrap();
                 // Mutual exclusion logic
-                let group_children = q_radio_group.get(child_of.parent).unwrap();
+                let group_children = q_radio_group.get(child_of.parent()).unwrap();
                 for radio_child in group_children.iter() {
                     if let Ok((_, value)) = q_radio.get(radio_child) {
                         commands

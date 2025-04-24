@@ -55,7 +55,7 @@ impl CoreSlider {
     pub fn set_range(&mut self, min: f32, max: f32) {
         self.min = min;
         self.max = max;
-        self.value = self.value.clamp(min, max).clamp(0., 1.);
+        self.value = self.value.clamp(min, max);
     }
 
     /// Compute the position of the thumb on the slider, as a value between 0 and 1.

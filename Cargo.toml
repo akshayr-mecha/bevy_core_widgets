@@ -5,4 +5,5 @@ edition = "2021"
 
 [dependencies]
 accesskit = "0.18.0"
-bevy = "0.16.0-dev"
+bevy = { version = "0.16.0-dev" }
+# bevy = { git = "https://github.com/bevyengine/bevy.git", rev = "refs/pull/18706/head" }

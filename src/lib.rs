@@ -4,6 +4,7 @@ mod core_button;
 mod core_checkbox;
 mod core_radio;
 mod core_radio_group;
+mod core_scrollbar;
 mod core_slider;
 mod cursor;
 mod events;
@@ -15,6 +16,7 @@ pub use core_button::{CoreButton, CoreButtonPlugin};
 pub use core_checkbox::{CoreCheckbox, CoreCheckboxPlugin};
 pub use core_radio::{CoreRadio, CoreRadioPlugin};
 pub use core_radio_group::{CoreRadioGroup, CoreRadioGroupPlugin};
+pub use core_scrollbar::{CoreScrollbar, CoreScrollbarPlugin, CoreScrollbarThumb, Orientation};
 pub use core_slider::{CoreSlider, CoreSliderPlugin, SliderDragState};
 pub use cursor::CursorIconPlugin;
 pub use events::{ButtonClicked, ValueChange};
@@ -30,6 +32,7 @@ impl Plugin for CoreWidgetsPlugin {
             CoreCheckboxPlugin,
             CoreRadioPlugin,
             CoreRadioGroupPlugin,
+            CoreScrollbarPlugin,
             CoreSliderPlugin,
             CursorIconPlugin,
         ))
