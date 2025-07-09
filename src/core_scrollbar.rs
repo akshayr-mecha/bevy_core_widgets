@@ -169,6 +169,7 @@ pub(crate) fn scrollbar_on_drag(
 
     //if drag srared on scroll content
     if let Ok((mut scroll_pos, scroll_content, drag)) = q_scroll_area.get_mut(trigger.target()) {
+       trigger.propagate(false);
         if drag.dragging {
             let distance = trigger.event().distance;
             let visible_size = scroll_content.size() * scroll_content.inverse_scale_factor;
@@ -192,9 +193,17 @@ pub(crate) fn scrollbar_on_drag(
 
 pub(crate) fn scrollbar_on_drag_end(
     mut trigger: Trigger<Pointer<DragEnd>>,
-    mut q_scrollbar: Query<(&CoreScrollbar, &mut ScrollbarDragState)>,
+    mut q_scrollbar: Query<&mut ScrollbarDragState, (With<CoreScrollbar>, Without<CoreScrollArea>)>,
+    mut q_scrollarea: Query<&mut ScrollbarDragState,  (With<CoreScrollArea>, Without<CoreScrollbar>)>,
 ) {
-    if let Ok((_scrollbar, mut drag)) = q_scrollbar.get_mut(trigger.target()) {
+    if let Ok(mut drag) = q_scrollbar.get_mut(trigger.target()) {
+        trigger.propagate(false);
+        if drag.dragging {
+            drag.dragging = false;
+        }
+    }
+
+    if let Ok( mut drag) = q_scrollarea.get_mut(trigger.target()) {
         trigger.propagate(false);
         if drag.dragging {
             drag.dragging = false;

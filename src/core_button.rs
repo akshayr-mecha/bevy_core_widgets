@@ -86,12 +86,12 @@ pub(crate) fn button_on_pointer_up(
     }
 }
 
-pub(crate) fn button_on_pointer_drag_end(
-    mut trigger: Trigger<Pointer<DragEnd>>,
+pub(crate) fn button_on_pointer_drag_start(
+    mut trigger: Trigger<Pointer<DragStart>>,
     mut q_state: Query<(&mut ButtonPressed, Has<InteractionDisabled>)>,
 ) {
     if let Ok((mut pressed, disabled)) = q_state.get_mut(trigger.target()) {
-        trigger.propagate(false);
+        trigger.propagate(true);
         if !disabled {
             pressed.0 = false;
         }
@@ -118,7 +118,7 @@ impl Plugin for CoreButtonPlugin {
             .add_observer(button_on_pointer_down)
             .add_observer(button_on_pointer_up)
             .add_observer(button_on_pointer_click)
-            .add_observer(button_on_pointer_drag_end)
+            .add_observer(button_on_pointer_drag_start)
             .add_observer(button_on_pointer_cancel);
     }
 }
